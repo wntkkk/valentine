@@ -1,0 +1,182 @@
+<!doctype html>
+<html lang="ru">
+<head>
+	<meta charset="utf-8" />
+	<meta name="viewport" content="width=device-width,initial-scale=1" />
+	<title>Будешь моей валентинкой?</title>
+	<style>
+		:root{
+			--pink-1:#fff0f6;
+			--pink-2:#ffc0dd;
+			--accent:#ff4da6;
+			--muted:#ff7fb0;
+			--card:#ffffffaa;
+			--shadow: 0 8px 24px rgba(255,90,150,0.12);
+			font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;
+		}
+		html,body{height:100%;margin:0}
+		body{
+			background: radial-gradient(1000px 600px at 10% 10%, var(--pink-2), var(--pink-1));
+			display:flex;align-items:center;justify-content:center;padding:24px;
+			-webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale;
+		}
+		.card{
+			width:100%;max-width:760px;background:linear-gradient(180deg, rgba(255,255,255,0.9), rgba(255,245,250,0.9));
+			border-radius:18px;padding:36px;text-align:center;box-shadow:var(--shadow);
+			border: 1px solid rgba(255,130,170,0.12);
+		}
+		h1{color:var(--accent);margin:0 0 20px;font-size:28px}
+		p.lead{color:#7b2b4a;margin:0 0 28px;font-size:18px}
+		.buttons{display:flex;gap:18px;justify-content:center;align-items:center}
+		.btn{
+			background:var(--accent);color:white;padding:14px 26px;border-radius:12px;border:none;font-size:16px;cursor:pointer;
+			box-shadow:0 6px 18px rgba(255,80,140,0.18);transition:transform .12s ease, opacity .12s ease;
+		}
+		.btn:active{transform:translateY(1px) scale(.98)}
+		.btn.ghost{background:linear-gradient(180deg,var(--pink-2),#ffd6ea);color:#5a1630}
+		.no-wrap{position:relative}
+		.no-btn{
+			width:120px;height:48px;display:inline-flex;align-items:center;justify-content:center;border-radius:12px;padding:0;overflow:hidden;
+			transform-origin:center center;transition:transform .08s linear, opacity .08s linear, width .08s linear, height .08s linear;
+			font-weight:600;border:2px solid rgba(255,90,150,0.06);
+		}
+		.result{margin-top:26px;color:#7b2b4a;font-size:18px}
+		.image-placeholder{
+			margin-top:18px;width:280px;height:180px;border-radius:12px;border:2px dashed rgba(255,90,140,0.25);
+			display:flex;align-items:center;justify-content:center;color:rgba(120,40,70,0.5);background:linear-gradient(180deg,#fff7fb,#fff1f6);
+		}
+		@media (max-width:420px){
+			.buttons{flex-direction:column}
+			.btn{width:100%;max-width:320px}
+			.no-btn{width:220px}
+		}
+
+		/* Animations for result and placeholder */
+		.fade-in{animation:fade .42s ease both}
+		.pop-in{animation:pop .48s cubic-bezier(.2,.9,.28,1) both}
+		@keyframes fade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+		@keyframes pop{0%{opacity:0;transform:scale(.9)}60%{opacity:1;transform:scale(1.06)}100%{transform:scale(1)}}
+
+		/* Gallery styles */
+		.gallery{display:flex;gap:12px;justify-content:center;margin-top:12px;flex-wrap:nowrap;overflow-x:auto;padding:8px 0}
+		.gallery-item{flex:0 0 140px;height:120px;border-radius:10px;border:1px solid rgba(255,90,140,0.12);background:linear-gradient(180deg,#fff7fb,#fff1f6);display:flex;align-items:center;justify-content:center;overflow:hidden;padding:6px}
+		.gallery-img{max-width:100%;max-height:100%;width:auto;height:auto;display:block;object-fit:contain}
+	</style>
+</head>
+<body>
+	<main class="card" role="main">
+		<h1>Ты будешь моей валентинкой сегодня?</h1>
+		<p class="lead">💕 Что думаешь на этот счёт, зайка? 💕</p>
+
+		<div class="buttons">
+			<button id="yesBtn" class="btn">Да</button>
+
+			<div class="no-wrap" aria-hidden="true">
+				<button id="noBtn" class="btn ghost no-btn">Нет</button>
+			</div>
+		</div>
+
+		<div id="result" class="result" aria-live="polite"></div>
+	</main>
+
+	<script>
+		(function(){
+			const noBtn = document.getElementById('noBtn');
+			const yesBtn = document.getElementById('yesBtn');
+			const result = document.getElementById('result');
+
+			// Parameters for shrinking behavior
+			const MAX_DIST = 260; // farthest distance where button is full size
+			const MIN_DIST = 30;  // distance where button reaches zero
+
+			// Helper: clamp
+			const clamp = (v,a,b)=>Math.max(a,Math.min(b,v));
+
+			// On mouse move, compute distance to center of noBtn and set scale
+			window.addEventListener('mousemove', (e)=>{
+				const rect = noBtn.getBoundingClientRect();
+				const cx = rect.left + rect.width/2;
+				const cy = rect.top + rect.height/2;
+				const dx = e.clientX - cx;
+				const dy = e.clientY - cy;
+				const dist = Math.sqrt(dx*dx + dy*dy);
+
+				// Map distance to scale: dist <= MIN => 0, dist >= MAX => 1
+				const t = clamp((dist - MIN_DIST) / (MAX_DIST - MIN_DIST), 0, 1);
+				// Make shrink non-linear for nicer effect
+				const scale = Math.pow(t, 1.15);
+
+				noBtn.style.transform = `scale(${scale})`;
+				noBtn.style.opacity = scale < 0.05 ? '0' : '1';
+
+				// To avoid accidental clicking when tiny, disable pointer events when very small
+				if(scale < 0.18){
+					noBtn.style.pointerEvents = 'none';
+				} else {
+					noBtn.style.pointerEvents = '';
+				}
+
+				// Also adjust width/height slightly so it truly becomes unclickable
+				const baseW = 120;
+				const baseH = 48;
+				noBtn.style.width = Math.max(0, Math.round(baseW * scale)) + 'px';
+				noBtn.style.height = Math.max(0, Math.round(baseH * scale)) + 'px';
+			});
+
+			// If user leaves the window, restore
+			window.addEventListener('mouseleave', ()=>{
+				noBtn.style.transform = '';
+				noBtn.style.opacity = '1';
+				noBtn.style.pointerEvents = '';
+				noBtn.style.width = '';
+				noBtn.style.height = '';
+			});
+
+			// Click handlers
+			yesBtn.addEventListener('click', ()=>{
+				result.innerHTML = '';
+
+				const msg = document.createElement('div');
+			msg.textContent = 'Урааа, я знал, что ты так скажешь!';
+			msg.style.fontWeight = '700';
+			msg.style.color = 'var(--accent)';
+			msg.style.marginBottom = '16px';
+			msg.className = 'fade-in pop-in';
+
+			// Create gallery with 5 images
+			const gallery = document.createElement('div');
+			gallery.className = 'gallery fade-in pop-in';
+
+			const images = ['pic1.jpg','pic2.jpg','pic3.jpg','pic4.jpg','pic5.jpg'];
+			images.forEach(src=>{
+				const imgWrap = document.createElement('div');
+				imgWrap.className = 'gallery-item';
+				const img = document.createElement('img');
+				img.src = src;
+				img.alt = 'valentine image';
+				img.className = 'gallery-img';
+				imgWrap.appendChild(img);
+				gallery.appendChild(imgWrap);
+			});
+
+			result.appendChild(msg);
+			result.appendChild(gallery);
+
+			// Focus on result for accessibility
+			result.focus && result.focus();
+		});
+
+		// Prevent clicking 'no' even when visible by keeping it from navigation focus
+		noBtn.addEventListener('click', (e)=>{
+			e.preventDefault();
+			// Small playful bounce if clicked when big enough
+			noBtn.animate([
+				{ transform: noBtn.style.transform || 'scale(1)' },
+				{ transform: 'scale(1.08)' },
+				{ transform: noBtn.style.transform || 'scale(1)' }
+			], { duration: 260, easing: 'ease-out' });
+		});
+		})();
+	</script>
+</body>
+</html>
